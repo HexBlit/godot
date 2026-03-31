@@ -32,7 +32,10 @@
 
 #include "core/extension/godot_instance.h"
 #include "core/extension/libgodot.h"
+#include "core/io/resource_loader.h"
 #include "main/main.h"
+
+#include <emscripten.h>
 
 static OS_Web *os = nullptr;
 static GodotInstance *instance = nullptr;
@@ -72,6 +75,9 @@ GDExtensionObjectPtr libgodot_create_godot_instance(int p_argc, char *p_argv[], 
 		return nullptr;
 	}
 
+	// Match web_main.cpp behavior for web compatibility.
+	ResourceLoader::set_abort_on_missing_resources(false);
+
 	instance = memnew(GodotInstance);
 	if (!instance->initialize(p_init_func)) {
 		memdelete(instance);
@@ -79,6 +85,27 @@ GDExtensionObjectPtr libgodot_create_godot_instance(int p_argc, char *p_argv[], 
 	}
 
 	return (GDExtensionObjectPtr)instance;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int libgodot_web_start() {
+	ERR_FAIL_COND_V_MSG(instance == nullptr, 0, "No Godot instance created.");
+	return instance->start() ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int libgodot_web_iteration() {
+	ERR_FAIL_COND_V_MSG(instance == nullptr, 1, "No Godot instance created.");
+	// Main::iteration() returns true when the engine wants to exit.
+	// We return 0 to continue, 1 to quit.
+	return instance->iteration() ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void libgodot_web_stop() {
+	if (instance != nullptr) {
+		instance->stop();
+	}
 }
 
 EMSCRIPTEN_KEEPALIVE
