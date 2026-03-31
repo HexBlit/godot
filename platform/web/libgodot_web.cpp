@@ -39,6 +39,28 @@ static GodotInstance *instance = nullptr;
 
 extern "C" {
 
+static void minimal_init(void *userdata, GDExtensionInitializationLevel p_level) {
+	// No-op: we don't register any classes yet
+}
+
+static void minimal_deinit(void *userdata, GDExtensionInitializationLevel p_level) {
+	// No-op
+}
+
+EMSCRIPTEN_KEEPALIVE
+GDExtensionBool minimal_gdextension_init(
+	GDExtensionInterfaceGetProcAddress p_get_proc_address,
+	GDExtensionClassLibraryPtr p_library,
+	GDExtensionInitialization *r_initialization) {
+
+	r_initialization->minimum_initialization_level = GDEXTENSION_INITIALIZATION_CORE;
+	r_initialization->initialize = minimal_init;
+	r_initialization->deinitialize = minimal_deinit;
+	r_initialization->userdata = nullptr;
+
+	return true;
+}
+
 EMSCRIPTEN_KEEPALIVE
 GDExtensionObjectPtr libgodot_create_godot_instance(int p_argc, char *p_argv[], GDExtensionInitializationFunction p_init_func) {
 	ERR_FAIL_COND_V_MSG(instance != nullptr, nullptr, "Only one Godot Instance may be created.");
